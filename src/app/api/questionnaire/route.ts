@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { ensureUserProfile } from "@/lib/supabase/ensure-profile";
 import { createClient } from "@/lib/supabase/server";
+import { QUESTIONNAIRE_DONE_COOKIE } from "@/lib/auth/flow-cookies";
 
 export async function GET() {
   const supabase = await createClient();
@@ -151,5 +152,18 @@ export async function POST(request: NextRequest) {
     action: "questionnaire_completed",
   });
 
-  return NextResponse.json({ success: true });
+  const response = NextResponse.json({ success: true });
+  response.cookies.set(QUESTIONNAIRE_DONE_COOKIE, "1", {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+    sameSite: "lax",
+    httpOnly: false,
+  });
+  response.cookies.set("pilotcfo_cfo_done", "1", {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+    sameSite: "lax",
+    httpOnly: false,
+  });
+  return response;
 }

@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/components/i18n/locale-provider";
 import {
   LayoutDashboard,
   HeartPulse,
@@ -27,20 +29,37 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { dict } = useI18n();
+
+  const items = [
+    { href: "/overview", label: dict.nav.overview, icon: LayoutDashboard },
+    { href: "/financial-health", label: dict.nav.financialHealth, icon: HeartPulse },
+    { href: "/profitability", label: dict.nav.profitability, icon: TrendingUp },
+    { href: "/cash-flow", label: dict.nav.cashFlow, icon: Wallet },
+    { href: "/forecasts", label: dict.nav.forecasts, icon: LineChart },
+    { href: "/ai-cfo", label: dict.nav.aiCfo, icon: MessageSquare },
+    { href: "/reports", label: dict.nav.reports, icon: FileText },
+    { href: "/settings", label: dict.nav.settings, icon: Settings },
+  ];
 
   return (
     <aside className="fixed left-0 top-0 h-full w-56 border-r border-border bg-sidebar flex flex-col z-40">
       <div className="px-5 py-6 border-b border-border">
         <Link href="/overview" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center">
-            <span className="text-white text-xs font-bold">PC</span>
-          </div>
+          <Image
+            src="/brand/logo.png"
+            alt="pilotCFO"
+            width={28}
+            height={28}
+            className="rounded-lg"
+            priority
+          />
           <span className="font-semibold text-sm tracking-tight">pilotCFO</span>
         </Link>
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+        {items.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link

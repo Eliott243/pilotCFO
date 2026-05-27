@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
@@ -91,9 +92,14 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-background flex flex-col">
       <header className="px-8 py-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center">
-            <span className="text-white text-xs font-bold">PC</span>
-          </div>
+          <Image
+            src="/brand/logo.png"
+            alt="pilotCFO"
+            width={28}
+            height={28}
+            className="rounded-lg"
+            priority
+          />
           <span className="font-semibold text-sm">pilotCFO</span>
         </div>
         <button

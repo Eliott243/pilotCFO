@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isDemoMode, isSupabaseConfigured } from "@/lib/supabase/config";
+import { ONBOARDING_DONE_COOKIE, QUESTIONNAIRE_DONE_COOKIE } from "@/lib/auth/flow-cookies";
 
 export async function updateSession(request: NextRequest) {
   if (!isSupabaseConfigured() || isDemoMode()) {
@@ -54,15 +55,27 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && !isAuthRoute && !isPublicRoute) {
-    const { data: profile } = await supabase
-      .from("users")
-      .select("onboarding_completed, questionnaire_completed")
-      .eq("id", user.id)
-      .maybeSingle();
+    // Avoid DB roundtrip on every navigation: prefer cookies set by completion endpoints.
+    const onboardingCookie = request.cookies.get(ONBOARDING_DONE_COOKIE)?.value === "1";
+    const questionnaireCookie = request.cookies.get(QUESTIONNAIRE_DONE_COOKIE)?.value === "1";
+    const cfoCookie = request.cookies.get("pilotcfo_cfo_done")?.value === "1";
 
-    const cfoQuestionnaireDone =
-      profile?.questionnaire_completed === true ||
-      request.cookies.get("pilotcfo_cfo_done")?.value === "1";
+    let onboardingDone = onboardingCookie;
+    let questionnaireDone = questionnaireCookie;
+    let cfoQuestionnaireDone = questionnaireCookie || cfoCookie;
+
+    // Only hit DB if we don't have enough info from cookies (first-time / new device).
+    if (!onboardingDone || !questionnaireDone) {
+      const { data: profile } = await supabase
+        .from("users")
+        .select("onboarding_completed, questionnaire_completed")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      onboardingDone = onboardingDone || profile?.onboarding_completed === true;
+      questionnaireDone = questionnaireDone || profile?.questionnaire_completed === true;
+      cfoQuestionnaireDone = questionnaireDone || cfoQuestionnaireDone;
+    }
 
     const onboardingExempt =
       pathname.startsWith("/onboarding") ||
@@ -70,7 +83,7 @@ export async function updateSession(request: NextRequest) {
       (pathname.startsWith("/ai-cfo") && cfoQuestionnaireDone);
 
     // Ne pas expulser du questionnaire ni renvoyer à l'onboarding après le CFO questionnaire
-    if (!profile?.onboarding_completed && !cfoQuestionnaireDone && !onboardingExempt) {
+    if (!onboardingDone && !cfoQuestionnaireDone && !onboardingExempt) {
       const url = request.nextUrl.clone();
       url.pathname = "/onboarding";
       return NextResponse.redirect(url);

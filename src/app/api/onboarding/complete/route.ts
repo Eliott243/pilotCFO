@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ensureUserProfile } from "@/lib/supabase/ensure-profile";
 import { createClient } from "@/lib/supabase/server";
+import { ONBOARDING_DONE_COOKIE } from "@/lib/auth/flow-cookies";
 
 export async function POST() {
   const supabase = await createClient();
@@ -34,5 +35,12 @@ export async function POST() {
     action: "onboarding_completed",
   });
 
-  return NextResponse.json({ success: true });
+  const response = NextResponse.json({ success: true });
+  response.cookies.set(ONBOARDING_DONE_COOKIE, "1", {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+    sameSite: "lax",
+    httpOnly: false,
+  });
+  return response;
 }

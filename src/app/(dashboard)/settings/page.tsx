@@ -2,6 +2,8 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { ShopifyConnect } from "@/components/settings/shopify-connect";
 import { SubscriptionPanel } from "@/components/settings/subscription-panel";
 import { createClient } from "@/lib/supabase/server";
+import { getDictionary, getLocale } from "@/lib/i18n/server";
+import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 
 export default async function SettingsPage({
   searchParams,
@@ -9,6 +11,8 @@ export default async function SettingsPage({
   searchParams: Promise<{ tab?: string; shopify?: string; error?: string }>;
 }) {
   const params = await searchParams;
+  const locale = await getLocale();
+  const dict = await getDictionary(locale);
   const supabase = await createClient();
   const {
     data: { user },
@@ -33,13 +37,18 @@ export default async function SettingsPage({
   return (
     <>
       <PageHeader
-        title="Settings"
-        subtitle="Gérez votre boutique Shopify, abonnement et préférences."
+        title={dict.settings.title}
+        subtitle={dict.settings.subtitle}
       />
 
       <div className="space-y-8 max-w-2xl">
         <section>
-          <h2 className="text-sm font-medium mb-4">Boutique Shopify</h2>
+          <h2 className="text-sm font-medium mb-4">{dict.settings.language}</h2>
+          <LocaleSwitcher current={locale} />
+        </section>
+
+        <section>
+          <h2 className="text-sm font-medium mb-4">{dict.settings.shopifyStore}</h2>
           <ShopifyConnect
             store={store}
             connection={connection}
@@ -49,7 +58,7 @@ export default async function SettingsPage({
         </section>
 
         <section>
-          <h2 className="text-sm font-medium mb-4">Entreprise</h2>
+          <h2 className="text-sm font-medium mb-4">{dict.settings.company}</h2>
           <div className="p-5 rounded-xl border border-border bg-card space-y-2">
             <p className="text-sm">
               <span className="text-muted">Nom · </span>
@@ -70,7 +79,7 @@ export default async function SettingsPage({
         </section>
 
         <section>
-          <h2 className="text-sm font-medium mb-4">Abonnement</h2>
+          <h2 className="text-sm font-medium mb-4">{dict.settings.subscription}</h2>
           <SubscriptionPanel subscription={subscription} />
         </section>
       </div>

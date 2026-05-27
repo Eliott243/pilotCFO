@@ -1,25 +1,34 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, BarChart3, Shield, Zap } from "lucide-react";
+import { getDictionary, getLocale } from "@/lib/i18n/server";
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const locale = await getLocale();
+  const dict = await getDictionary(locale);
   return (
     <div className="min-h-screen bg-background">
       <header className="max-w-5xl mx-auto px-8 py-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
-            <span className="text-white text-sm font-bold">PC</span>
-          </div>
+          <Image
+            src="/brand/logo.png"
+            alt="pilotCFO"
+            width={32}
+            height={32}
+            className="rounded-lg"
+            priority
+          />
           <span className="font-semibold">pilotCFO</span>
         </div>
         <div className="flex items-center gap-3">
           <Link href="/login">
             <Button variant="ghost" size="sm">
-              Connexion
+              {dict.landing.signIn}
             </Button>
           </Link>
           <Link href="/signup">
-            <Button size="sm">Commencer</Button>
+            <Button size="sm">{dict.landing.start}</Button>
           </Link>
         </div>
       </header>

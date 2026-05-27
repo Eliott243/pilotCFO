@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
@@ -38,9 +39,14 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center mx-auto mb-4">
-            <span className="text-white text-sm font-bold">PC</span>
-          </div>
+          <Image
+            src="/brand/logo.png"
+            alt="pilotCFO"
+            width={40}
+            height={40}
+            className="rounded-lg mx-auto mb-4"
+            priority
+          />
           <h1 className="text-xl font-semibold">Créer un compte</h1>
           <p className="text-sm text-muted mt-1">14 jours d&apos;essai gratuit</p>
         </div>

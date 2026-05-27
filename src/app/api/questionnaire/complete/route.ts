@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ensureUserProfile } from "@/lib/supabase/ensure-profile";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { QUESTIONNAIRE_DONE_COOKIE } from "@/lib/auth/flow-cookies";
 
 /** Marque le questionnaire CFO comme terminé (sans sauvegarder les réponses en base). */
 export async function POST() {
@@ -41,6 +42,12 @@ export async function POST() {
   response.cookies.set("pilotcfo_cfo_done", "1", {
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
+    sameSite: "lax",
+    httpOnly: false,
+  });
+  response.cookies.set(QUESTIONNAIRE_DONE_COOKIE, "1", {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
     sameSite: "lax",
     httpOnly: false,
   });
