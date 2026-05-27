@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { syncShopifyStore } from "@/lib/shopify/sync";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export async function POST() {
@@ -11,6 +10,10 @@ export async function POST() {
   if (!user) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
   const { data: company } = await supabase
     .from("companies")
@@ -42,13 +45,44 @@ export async function POST() {
     return NextResponse.json({ error: "Connexion Shopify introuvable" }, { status: 404 });
   }
 
+  if (!session?.access_token) {
+    return NextResponse.json({ error: "Session invalide" }, { status: 401 });
+  }
+
+  // Mark syncing (best-effort)
+  await supabase
+    .from("shopify_connections")
+    .update({ sync_status: "syncing", sync_error: null })
+    .eq("store_id", store.id);
+
   const serviceClient = await createServiceClient();
-  const result = await syncShopifyStore(
-    serviceClient,
-    store.id,
-    store.shopify_domain,
-    connection.access_token
-  );
+  const { data: shopConn } = await serviceClient
+    .from("shopify_connections")
+    .select("id")
+    .eq("store_id", store.id)
+    .single();
+
+  if (!shopConn?.id) {
+    return NextResponse.json({ error: "shop_id introuvable" }, { status: 500 });
+  }
+
+  const functionsUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/sync-shopify-data`;
+  const res = await fetch(functionsUrl, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ shop_id: shopConn.id }),
+  });
+
+  const result = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return NextResponse.json(
+      { error: "Sync failed", detail: result?.detail ?? result?.error ?? "" },
+      { status: 500 }
+    );
+  }
 
   await supabase.from("activity_logs").insert({
     user_id: user.id,

@@ -78,10 +78,14 @@ export async function GET(request: NextRequest) {
         store_id: store.id,
         access_token,
         scope,
+        connected: true,
+        sync_status: "never",
+        sync_error: null,
       },
       { onConflict: "store_id" }
     );
 
+    // Initial sync still runs in-app; the UI can trigger full paginated Edge sync.
     await syncShopifyStore(supabase, store.id, shopDomain, access_token);
 
     await supabase.from("activity_logs").insert({

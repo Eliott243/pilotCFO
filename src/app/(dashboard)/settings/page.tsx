@@ -14,14 +14,20 @@ export default async function SettingsPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: company }, { data: store }, { data: subscription }] = await Promise.all([
+  const [{ data: company }, { data: store }, { data: subscription }, { data: connection }] =
+    await Promise.all([
     supabase.from("companies").select("*").eq("user_id", user!.id).single(),
     supabase
       .from("stores")
-      .select("shopify_domain, shop_name, last_synced_at")
+      .select("id, shopify_domain, shop_name")
       .limit(1)
       .maybeSingle(),
     supabase.from("subscriptions").select("*").eq("user_id", user!.id).single(),
+    supabase
+      .from("shopify_connections")
+      .select("id, last_synced_at, sync_status, sync_error, connected")
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   return (
@@ -36,6 +42,7 @@ export default async function SettingsPage({
           <h2 className="text-sm font-medium mb-4">Boutique Shopify</h2>
           <ShopifyConnect
             store={store}
+            connection={connection}
             connected={params.shopify === "connected"}
             error={params.error}
           />

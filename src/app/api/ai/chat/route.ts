@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
-import { buildCFOSystemPrompt } from "@/lib/ai/cfo-prompt";
 import { getStoreMetrics } from "@/lib/data/metrics";
 import { createClient } from "@/lib/supabase/server";
-
-function getOpenAI() {
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
-}
+import { answerCfoQuestion } from "@/lib/ai/cfo-answer-engine";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -25,24 +20,7 @@ export async function POST(request: NextRequest) {
 
   const { metrics, currency } = await getStoreMetrics();
 
-  if (!process.env.OPENAI_API_KEY) {
-    return NextResponse.json({
-      reply:
-        "Le service AI CFO nécessite une clé OpenAI configurée. En attendant, consultez vos dashboards Overview, Profitability et Cash Flow pour vos métriques calculées.",
-    });
-  }
-
-  const completion = await getOpenAI().chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      { role: "system", content: buildCFOSystemPrompt(metrics, currency) },
-      { role: "user", content: message },
-    ],
-    max_tokens: 800,
-    temperature: 0.3,
-  });
-
-  const reply = completion.choices[0]?.message?.content ?? "Réponse indisponible.";
+  const reply = answerCfoQuestion({ question: message, metrics, currency });
 
   await supabase.from("activity_logs").insert({
     user_id: user.id,
