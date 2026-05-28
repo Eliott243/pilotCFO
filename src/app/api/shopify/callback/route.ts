@@ -42,23 +42,48 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createServiceClient();
 
-    const { data: company } = await supabase
-      .from("companies")
-      .select("id")
-      .eq("user_id", userId)
-      .single();
+    // Create or update the company from the connected store. The store is the
+    // authoritative source for currency (orders are in store currency), so we
+    // always sync it; name/country are only backfilled when not set by the user.
+    const shopCurrency = shopInfo.currency ?? "USD";
+    const shopCountry = shopInfo.country_name ?? shopInfo.country_code ?? null;
 
-    if (!company) {
-      return NextResponse.redirect(
-        new URL("/questionnaire", process.env.NEXT_PUBLIC_APP_URL!)
-      );
+    const { data: existingCompany } = await supabase
+      .from("companies")
+      .select("id, name, country")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    let companyId: string;
+
+    if (!existingCompany) {
+      const { data: createdCompany, error: createError } = await supabase
+        .from("companies")
+        .insert({
+          user_id: userId,
+          name: shopInfo.name ?? shopDomain,
+          country: shopCountry,
+          currency: shopCurrency,
+        })
+        .select("id")
+        .single();
+
+      if (createError || !createdCompany) throw createError;
+      companyId = createdCompany.id;
+    } else {
+      companyId = existingCompany.id;
+      const companyUpdates: Record<string, unknown> = { currency: shopCurrency };
+      if (!existingCompany.name) companyUpdates.name = shopInfo.name ?? shopDomain;
+      if (!existingCompany.country && shopCountry) companyUpdates.country = shopCountry;
+
+      await supabase.from("companies").update(companyUpdates).eq("id", existingCompany.id);
     }
 
     const { data: store, error: storeError } = await supabase
       .from("stores")
       .upsert(
         {
-          company_id: company.id,
+          company_id: companyId,
           shopify_domain: shopDomain,
           shop_name: shopInfo.name,
           shop_email: shopInfo.email,

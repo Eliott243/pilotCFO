@@ -72,8 +72,8 @@ export default async function SettingsPage({
               <span className="text-muted">Devise · </span>
               {company?.currency ?? "USD"}
             </p>
-            <a href="/questionnaire" className="text-xs text-accent hover:underline">
-              Modifier le questionnaire CFO →
+            <a href="/settings/company" className="text-xs text-accent hover:underline">
+              Modifier les informations de l&apos;entreprise →
             </a>
           </div>
         </section>
