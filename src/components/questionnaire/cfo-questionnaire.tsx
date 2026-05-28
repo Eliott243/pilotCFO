@@ -34,6 +34,10 @@ export function CfoQuestionnaire() {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    // Restore a draft from sessionStorage after mount. setState here is intentional:
+    // sessionStorage is unavailable during SSR, so we hydrate once on the client and
+    // render a loading state until `hydrated` is true to avoid hydration mismatches.
+    /* eslint-disable react-hooks/set-state-in-effect */
     try {
       const raw = sessionStorage.getItem(CFO_DRAFT_STORAGE_KEY);
       if (raw) {
@@ -52,6 +56,7 @@ export function CfoQuestionnaire() {
       // ignore
     }
     setHydrated(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
   useEffect(() => {

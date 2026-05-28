@@ -16,17 +16,6 @@ import {
   Settings,
 } from "lucide-react";
 
-const NAV_ITEMS = [
-  { href: "/overview", label: "Overview", icon: LayoutDashboard },
-  { href: "/financial-health", label: "Financial Health", icon: HeartPulse },
-  { href: "/profitability", label: "Profitability", icon: TrendingUp },
-  { href: "/cash-flow", label: "Cash Flow", icon: Wallet },
-  { href: "/forecasts", label: "Forecasts", icon: LineChart },
-  { href: "/ai-cfo", label: "AI CFO", icon: MessageSquare },
-  { href: "/reports", label: "Reports", icon: FileText },
-  { href: "/settings", label: "Settings", icon: Settings },
-];
-
 export function Sidebar() {
   const pathname = usePathname();
   const { dict } = useI18n();

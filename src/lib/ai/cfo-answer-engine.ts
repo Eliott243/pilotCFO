@@ -30,15 +30,15 @@ export function answerCfoQuestion(params: {
     case "margin_drop":
       return marginDrop(metrics, currency);
     case "increase_meta_budget":
-      return increaseMetaBudget(metrics, currency);
+      return increaseMetaBudget(metrics);
     case "hire":
       return hiring(metrics, currency);
     case "risks":
-      return risks(metrics, currency);
+      return risks(metrics);
     case "unprofitable_products":
       return unprofitableProducts(metrics, currency);
     case "health":
-      return health(metrics, currency);
+      return health(metrics);
     default:
       return generic(metrics, currency);
   }
@@ -77,7 +77,7 @@ function marginDrop(m: CFOMetrics, currency: string): string {
   return lines.join("\n");
 }
 
-function increaseMetaBudget(m: CFOMetrics, currency: string): string {
+function increaseMetaBudget(m: CFOMetrics): string {
   const roas = m.marketing.roas;
   const mer = m.marketing.mer;
   const margin = m.profitability.netMarginPct;
@@ -117,7 +117,7 @@ function hiring(m: CFOMetrics, currency: string): string {
   ].join("\n");
 }
 
-function risks(m: CFOMetrics, currency: string): string {
+function risks(m: CFOMetrics): string {
   const alerts = m.alerts.slice(0, 3);
   const headline =
     alerts[0]?.title ??
@@ -149,7 +149,7 @@ function unprofitableProducts(m: CFOMetrics, currency: string): string {
   ].join("\n");
 }
 
-function health(m: CFOMetrics, currency: string): string {
+function health(m: CFOMetrics): string {
   return [
     `Score global: ${m.health.overall}/100.`,
     `Rentabilité: ${m.health.profitability}/100 · Trésorerie: ${m.health.cash}/100 · Croissance: ${m.health.growth}/100.`,

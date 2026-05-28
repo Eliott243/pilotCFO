@@ -157,7 +157,6 @@ function calculateCashFlow(
     marketingSpend * 0.5
   );
 
-  const netMonthlyCash = monthlyInflow - monthlyBurn;
   const runwayMonths =
     monthlyBurn > 0
       ? (cashAvailable + creditLine - debt) / monthlyBurn
@@ -340,10 +339,7 @@ function generateAlerts(
   });
 }
 
-export function detectProfitabilityIssues(
-  metrics: CFOMetrics,
-  products: Product[]
-): AuditFinding[] {
+export function detectProfitabilityIssues(metrics: CFOMetrics): AuditFinding[] {
   const findings: AuditFinding[] = [];
 
   if (metrics.profitability.netMarginPct < 10) {

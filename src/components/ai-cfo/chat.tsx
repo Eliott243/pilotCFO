@@ -71,6 +71,8 @@ export function AICFOChat() {
 
     autoStarted.current = true;
     sessionStorage.removeItem(AI_PREFILL_STORAGE_KEY);
+    // Intentional one-time auto-send driven by the `autostart` URL param + sessionStorage.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     sendMessage(prefill);
   }, [searchParams, sendMessage]);
 

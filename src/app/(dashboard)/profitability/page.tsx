@@ -3,21 +3,11 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { getStoreMetrics } from "@/lib/data/metrics";
 import { formatCurrency, formatPercent } from "@/lib/utils";
 import { detectProfitabilityIssues } from "@/lib/cfo-engine";
-import { isDemoMode } from "@/lib/supabase/config";
-import { createClient } from "@/lib/supabase/server";
 
 export default async function ProfitabilityPage() {
   const { metrics, hasStore, currency } = await getStoreMetrics();
 
-  let findings: ReturnType<typeof detectProfitabilityIssues> = [];
-  if (metrics && !isDemoMode()) {
-    const supabase = await createClient();
-    const { data: store } = await supabase.from("stores").select("id").limit(1).single();
-    const { data: products } = store
-      ? await supabase.from("products").select("*").eq("store_id", store.id)
-      : { data: [] };
-    findings = detectProfitabilityIssues(metrics, products ?? []);
-  }
+  const findings = metrics ? detectProfitabilityIssues(metrics) : [];
 
   return (
     <>

@@ -1,96 +1,67 @@
 # pilotCFO
 
-CFO virtuel spécialisé pour les marchands Shopify. Pas un chatbot — un directeur financier qui analyse votre rentabilité, trésorerie, croissance et risques à partir de vos **données réelles**.
+CFO virtuel pour marchands **Shopify** — rentabilité, trésorerie, marketing et risques à partir de vos **données réelles**, pas d’un chatbot générique.
+
+[![Documentation](./docs/README.md)](./docs/README.md)
+
+## Documentation complète
+
+| Guide | Lien |
+|-------|------|
+| Index & navigation | [docs/README.md](./docs/README.md) |
+| Vue produit | [docs/01-product.md](./docs/01-product.md) |
+| Architecture | [docs/02-architecture.md](./docs/02-architecture.md) |
+| Installation | [docs/03-installation.md](./docs/03-installation.md) |
+| Configuration | [docs/04-configuration.md](./docs/04-configuration.md) |
+| Base de données | [docs/05-database.md](./docs/05-database.md) |
+| Shopify | [docs/06-shopify.md](./docs/06-shopify.md) |
+| Edge Functions | [docs/07-edge-functions.md](./docs/07-edge-functions.md) |
+| API | [docs/08-api.md](./docs/08-api.md) |
+| Moteur CFO | [docs/09-cfo-engine.md](./docs/09-cfo-engine.md) |
+| Stripe | [docs/10-stripe.md](./docs/10-stripe.md) |
+| Sécurité | [docs/11-security.md](./docs/11-security.md) |
+| Déploiement | [docs/12-deployment.md](./docs/12-deployment.md) |
+| Guide utilisateur | [docs/13-user-guide.md](./docs/13-user-guide.md) |
+| Dépannage | [docs/14-troubleshooting.md](./docs/14-troubleshooting.md) |
 
 ## Stack
 
-- **Next.js 16** (App Router, TypeScript)
-- **Supabase** — Auth, PostgreSQL, RLS, Storage
-- **Shopify Admin API** — OAuth, sync commandes/produits/clients
-- **Stripe** — Essai 14j, abonnements, portail client, webhooks
-- **OpenAI** — AI CFO (interprète le moteur CFO, n'invente pas de chiffres)
+- **Next.js 16** — App Router, TypeScript, Tailwind CSS 4
+- **Supabase** — Auth, PostgreSQL, RLS, Edge Functions
+- **Shopify Admin API** — OAuth, sync paginée, webhooks
+- **Stripe** — Essai, abonnements, portail client
 
-## Architecture
-
-```
-src/lib/cfo-engine/     → Source de vérité (marges, ROAS, runway, scores…)
-src/lib/data/metrics.ts → Agrégation Supabase + moteur CFO
-src/lib/shopify/        → OAuth + synchronisation
-src/lib/ai/             → Prompt CFO + interprétation
-```
-
-## Démarrage
-
-### 1. Variables d'environnement
+## Démarrage rapide
 
 ```bash
 cp .env.example .env.local
-```
+# Renseigner Supabase, Shopify, Stripe — voir docs/04-configuration.md
 
-Renseigner Supabase, Shopify, Stripe et OpenAI (voir `.env.example`).
+# Migrations SQL (Supabase SQL Editor, dans l'ordre) :
+# 001_initial_schema.sql → 002_users_insert_policy.sql → 003_shopify_sync_v2.sql
 
-### 2. Base de données Supabase
-
-Dans le SQL Editor Supabase, exécuter :
-
-```
-supabase/migrations/001_initial_schema.sql
-```
-
-### 3. Lancer l'app
-
-```bash
 npm install
 npm run dev
 ```
 
-Ouvrir [http://localhost:3000](http://localhost:3000).
+→ [Installation détaillée](./docs/03-installation.md)
 
-## Parcours utilisateur
+## Architecture (résumé)
 
-1. **Inscription** → Onboarding guidé (6 étapes, skip possible)
-2. **Questionnaire CFO** → Profil financier sauvegardé
-3. **Connexion Shopify** → Import réel des données
-4. **Dashboards** → Overview, Financial Health, Profitability, Cash Flow, Forecasts
-5. **AI CFO** → Questions métier, réponses basées sur le moteur
-6. **Reports** → Rapports mensuels structurés
+```
+src/lib/cfo-engine/       → Calculs financiers (source de vérité)
+src/lib/data/metrics.ts   → Agrégation BDD → moteur CFO
+src/lib/ai/               → AI CFO déterministe (sans OpenAI requis)
+supabase/functions/       → Sync Shopify v2 + webhooks
+```
 
-## Menu principal
+## Fonctionnalités
 
-- Overview
-- Financial Health
-- Profitability
-- Cash Flow
-- Forecasts
-- AI CFO
-- Reports
-- Settings
+- Onboarding + questionnaire CFO (6 questions)
+- Connexion Shopify OAuth + sync 12 mois + webhooks temps réel
+- Dashboards : Overview, Financial Health, Profitability, Cash Flow, Forecasts
+- AI CFO, rapports, i18n FR/EN, facturation Stripe
 
-## Sécurité
+## Licence
 
-- Row Level Security sur toutes les tables
-- Isolation totale des données par `auth.uid()`
-- Routes protégées via middleware
-- Validation Zod sur les API
-- Tokens Shopify en base (accès service role pour sync)
-- Audit logs (`activity_logs`)
-
-## Shopify
-
-1. Créer une app dans [Shopify Partners](https://partners.shopify.com)
-2. URL de redirection : `{APP_URL}/api/shopify/callback`
-3. Scopes : `read_orders,read_products,read_customers,read_inventory`
-
-## Stripe
-
-1. Créer produit/prix Growth
-2. Webhook : `{APP_URL}/api/stripe/webhook`
-3. Événements : `customer.subscription.*`
-
-## Prochaines étapes recommandées
-
-- [ ] Webhooks Shopify (commandes temps réel)
-- [ ] Coûts produits via Inventory API
-- [ ] Pagination sync (>250 commandes)
-- [ ] Feature flags par plan (Forecasts, AI CFO)
-- [ ] Tests unitaires moteur CFO
+Propriétaire — tous droits réservés (sauf mention contraire).
