@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 interface SubscriptionPanelProps {
@@ -12,16 +13,30 @@ interface SubscriptionPanelProps {
 }
 
 export function SubscriptionPanel({ subscription }: SubscriptionPanelProps) {
+  const [loading, setLoading] = useState<"checkout" | "portal" | null>(null);
+
   async function openPortal() {
-    const res = await fetch("/api/stripe/portal", { method: "POST" });
-    const { url } = await res.json();
-    if (url) window.location.href = url;
+    if (loading) return;
+    setLoading("portal");
+    try {
+      const res = await fetch("/api/stripe/portal", { method: "POST" });
+      const { url } = await res.json();
+      if (url) window.location.href = url;
+    } finally {
+      setLoading(null);
+    }
   }
 
   async function startCheckout() {
-    const res = await fetch("/api/stripe/checkout", { method: "POST" });
-    const { url } = await res.json();
-    if (url) window.location.href = url;
+    if (loading) return;
+    setLoading("checkout");
+    try {
+      const res = await fetch("/api/stripe/checkout", { method: "POST" });
+      const { url } = await res.json();
+      if (url) window.location.href = url;
+    } finally {
+      setLoading(null);
+    }
   }
 
   const isTrialing = subscription?.status === "trialing";
@@ -40,12 +55,23 @@ export function SubscriptionPanel({ subscription }: SubscriptionPanelProps) {
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           {plan === "trial" || plan === "starter" ? (
-            <Button size="sm" onClick={startCheckout} className="w-full sm:w-auto">
-              Passer à Growth
+            <Button
+              size="sm"
+              onClick={startCheckout}
+              disabled={loading !== null}
+              className="w-full sm:w-auto"
+            >
+              {loading === "checkout" ? "Redirection..." : "Passer à Growth"}
             </Button>
           ) : null}
-          <Button size="sm" variant="secondary" onClick={openPortal} className="w-full sm:w-auto">
-            Portail client
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={openPortal}
+            disabled={loading !== null}
+            className="w-full sm:w-auto"
+          >
+            {loading === "portal" ? "Redirection..." : "Portail client"}
           </Button>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import { isDemoMode } from "@/lib/supabase/config";
+import { isDemoMetricsOnly } from "@/lib/supabase/config";
 
 export default function DashboardLayout({
   children,
@@ -7,7 +7,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <DashboardShell showDemoBanner={isDemoMode()}>
+    <DashboardShell showDemoBanner={isDemoMetricsOnly()}>
       {children}
     </DashboardShell>
   );

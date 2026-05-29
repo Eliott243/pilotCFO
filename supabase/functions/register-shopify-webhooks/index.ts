@@ -30,16 +30,10 @@ serve(async (req) => {
   } = await supabase.auth.getUser(jwt);
   if (!user) return json(401, { error: "Invalid token" });
 
-  const { shop_id, supabase_functions_url } = await req.json().catch(() => ({
-    shop_id: null,
-    supabase_functions_url: null,
-  }));
+  const { shop_id } = await req.json().catch(() => ({ shop_id: null }));
   if (!shop_id) return json(400, { error: "Missing shop_id" });
 
-  const functionsUrl =
-    supabase_functions_url ??
-    Deno.env.get("SUPABASE_FUNCTIONS_URL") ??
-    null;
+  const functionsUrl = Deno.env.get("SUPABASE_FUNCTIONS_URL");
   if (!functionsUrl) {
     return json(500, { error: "Missing SUPABASE_FUNCTIONS_URL" });
   }

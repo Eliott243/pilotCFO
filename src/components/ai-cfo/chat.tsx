@@ -43,6 +43,11 @@ export function AICFOChat() {
         body: JSON.stringify({ message: text }),
       });
 
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error ?? "Erreur serveur");
+      }
+
       const data = await res.json();
       setMessages((prev) => [
         ...prev,
@@ -123,7 +128,12 @@ export function AICFOChat() {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage(input)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              sendMessage(input);
+            }
+          }}
           placeholder="Posez votre question financière..."
           className="flex-1 px-3 py-2 text-sm bg-stone-50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30"
           disabled={loading}

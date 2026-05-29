@@ -1,11 +1,16 @@
 import { PageHeader } from "@/components/dashboard/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Button } from "@/components/ui/button";
+import { GenerateReportButton } from "@/components/reports/generate-report-button";
 import { createClient } from "@/lib/supabase/server";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
-export default async function ReportsPage() {
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const params = await searchParams;
   const supabase = await createClient();
   const { data: reports } = await supabase
     .from("reports")
@@ -19,12 +24,16 @@ export default async function ReportsPage() {
         title="Reports"
         subtitle="Rapports mensuels générés par le moteur CFO : Executive Summary, Revenue, Profitability, Cash Flow, Risks, Recommendations, Forecasts."
       >
-        <form action="/api/reports/generate" method="POST">
-          <Button type="submit" variant="secondary" size="sm" className="w-full sm:w-auto">
-            Générer rapport mensuel
-          </Button>
-        </form>
+        <GenerateReportButton />
       </PageHeader>
+
+      {params.error && (
+        <p className="text-sm text-danger mb-4">
+          {params.error === "rate"
+            ? "Trop de rapports générés. Réessayez dans une minute."
+            : "Impossible de générer le rapport. Vérifiez votre connexion Shopify."}
+        </p>
+      )}
 
       {!reports || reports.length === 0 ? (
         <EmptyState

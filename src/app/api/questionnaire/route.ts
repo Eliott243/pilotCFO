@@ -157,13 +157,15 @@ export async function POST(request: NextRequest) {
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
     sameSite: "lax",
-    httpOnly: false,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
   });
   response.cookies.set("pilotcfo_cfo_done", "1", {
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
     sameSite: "lax",
-    httpOnly: false,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
   });
   return response;
 }

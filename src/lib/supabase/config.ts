@@ -5,8 +5,15 @@ export function isSupabaseConfigured(): boolean {
   );
 }
 
-export function isDemoMode(): boolean {
-  // Demo mode must be explicitly enabled.
-  // If Supabase is missing, the app should fail fast rather than silently switching to demo.
+/** Fake metrics only — never disables auth in production. */
+export function isDemoMetricsOnly(): boolean {
+  if (process.env.NODE_ENV === "production") {
+    return false;
+  }
   return process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+}
+
+/** @deprecated Use isDemoMetricsOnly — demo never bypasses auth. */
+export function isDemoMode(): boolean {
+  return isDemoMetricsOnly();
 }

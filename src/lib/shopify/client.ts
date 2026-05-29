@@ -21,22 +21,27 @@ export function verifyShopifyHmac(
   secret: string
 ): boolean {
   const { hmac, ...rest } = query;
-  if (!hmac) return false;
+  if (!hmac || !secret) return false;
 
-  const message = Object.keys(rest)
-    .sort()
-    .map((key) => `${key}=${rest[key]}`)
-    .join("&");
+  try {
+    const message = Object.keys(rest)
+      .sort()
+      .map((key) => `${key}=${rest[key]}`)
+      .join("&");
 
-  const generated = crypto
-    .createHmac("sha256", secret)
-    .update(message)
-    .digest("hex");
+    const generated = crypto
+      .createHmac("sha256", secret)
+      .update(message)
+      .digest("hex");
 
-  return crypto.timingSafeEqual(
-    Buffer.from(generated),
-    Buffer.from(hmac)
-  );
+    const a = Buffer.from(generated, "hex");
+    const b = Buffer.from(hmac, "hex");
+    if (a.length !== b.length) return false;
+
+    return crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
 }
 
 export async function exchangeShopifyToken(

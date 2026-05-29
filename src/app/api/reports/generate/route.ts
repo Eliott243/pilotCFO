@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { calculateMetrics } from "@/lib/cfo-engine";
+import { getStoreMetrics } from "@/lib/data/metrics";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { subDays, format } from "date-fns";
-import type { Order, Product, FinancialProfile } from "@/types/database";
 
 export async function POST() {
   const supabase = await createClient();
@@ -14,23 +14,14 @@ export async function POST() {
     return NextResponse.redirect(new URL("/login", process.env.NEXT_PUBLIC_APP_URL));
   }
 
-  const { data: company } = await supabase
-    .from("companies")
-    .select("id")
-    .eq("user_id", user.id)
-    .single();
-
-  if (!company) {
-    return NextResponse.redirect(new URL("/settings", process.env.NEXT_PUBLIC_APP_URL));
+  const { allowed } = checkRateLimit(`reports:${user.id}`, 5, 60_000);
+  if (!allowed) {
+    return NextResponse.redirect(new URL("/reports?error=rate", process.env.NEXT_PUBLIC_APP_URL));
   }
 
-  const { data: store } = await supabase
-    .from("stores")
-    .select("id")
-    .eq("company_id", company.id)
-    .single();
+  const { metrics, hasStore, storeId } = await getStoreMetrics();
 
-  if (!store) {
+  if (!hasStore || !metrics || !storeId || storeId === "demo") {
     return NextResponse.redirect(
       new URL("/settings?tab=shopify", process.env.NEXT_PUBLIC_APP_URL)
     );
@@ -38,31 +29,10 @@ export async function POST() {
 
   const periodStart = subDays(new Date(), 30);
   const periodEnd = new Date();
-
-  const [ordersRes, productsRes, profileRes] = await Promise.all([
-    supabase
-      .from("orders")
-      .select("*")
-      .eq("store_id", store.id)
-      .gte("ordered_at", periodStart.toISOString()),
-    supabase.from("products").select("*").eq("store_id", store.id),
-    supabase
-      .from("financial_profiles")
-      .select("*")
-      .eq("company_id", company.id)
-      .single(),
-  ]);
-
-  const metrics = calculateMetrics({
-    orders: (ordersRes.data ?? []) as Order[],
-    products: (productsRes.data ?? []) as Product[],
-    profile: profileRes.data as FinancialProfile | null,
-  });
-
   const title = `Rapport mensuel — ${format(periodEnd, "MMMM yyyy")}`;
 
   const { error } = await supabase.from("reports").insert({
-    store_id: store.id,
+    store_id: storeId,
     type: "monthly",
     period_start: format(periodStart, "yyyy-MM-dd"),
     period_end: format(periodEnd, "yyyy-MM-dd"),
@@ -87,15 +57,20 @@ export async function POST() {
       riskLevel: metrics.cashFlow.riskLevel,
     },
     risks_section: metrics.alerts,
-    recommendations: metrics.alerts
-      .filter((a) => a.action)
-      .map((a) => a.action!),
+    recommendations: metrics.alerts.filter((a) => a.action).map((a) => a.action!),
     forecasts_section: metrics.forecasts,
   });
 
   if (error) {
     return NextResponse.redirect(new URL("/reports?error=1", process.env.NEXT_PUBLIC_APP_URL));
   }
+
+  await supabase.from("activity_logs").insert({
+    user_id: user.id,
+    action: "report_generated",
+    resource_type: "report",
+    resource_id: storeId,
+  });
 
   return NextResponse.redirect(new URL("/reports", process.env.NEXT_PUBLIC_APP_URL));
 }

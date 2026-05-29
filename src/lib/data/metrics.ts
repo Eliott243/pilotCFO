@@ -1,6 +1,6 @@
 import { calculateMetrics } from "@/lib/cfo-engine";
 import { getDemoMetrics } from "@/lib/demo/metrics";
-import { isDemoMode } from "@/lib/supabase/config";
+import { isDemoMetricsOnly } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 import type { CFOMetrics, FinancialProfile, Order, Product } from "@/types/database";
 import { subDays } from "date-fns";
@@ -12,7 +12,7 @@ export async function getStoreMetrics(storeId?: string): Promise<{
   storeId: string | null;
   currency: string;
 }> {
-  if (isDemoMode()) {
+  if (isDemoMetricsOnly()) {
     return {
       metrics: getDemoMetrics(),
       hasStore: true,
@@ -96,14 +96,16 @@ export async function getStoreMetrics(storeId?: string): Promise<{
         .select("*")
         .eq("shop_id", connection.id)
         .gte("created_at", periodStart)
-        .order("created_at", { ascending: false }),
+        .order("created_at", { ascending: false })
+        .limit(10_000),
       supabase
         .from("shopify_orders")
         .select("*")
         .eq("shop_id", connection.id)
         .gte("created_at", previousStart)
-        .lt("created_at", periodStart),
-      supabase.from("shopify_products").select("*").eq("shop_id", connection.id),
+        .lt("created_at", periodStart)
+        .limit(10_000),
+      supabase.from("shopify_products").select("*").eq("shop_id", connection.id).limit(5_000),
     ]);
 
     if ((v2Orders.data?.length ?? 0) > 0) {
@@ -123,14 +125,16 @@ export async function getStoreMetrics(storeId?: string): Promise<{
         .select("*")
         .eq("store_id", store.id)
         .gte("ordered_at", periodStart)
-        .order("ordered_at", { ascending: false }),
+        .order("ordered_at", { ascending: false })
+        .limit(10_000),
       supabase
         .from("orders")
         .select("*")
         .eq("store_id", store.id)
         .gte("ordered_at", previousStart)
-        .lt("ordered_at", periodStart),
-      supabase.from("products").select("*").eq("store_id", store.id),
+        .lt("ordered_at", periodStart)
+        .limit(10_000),
+      supabase.from("products").select("*").eq("store_id", store.id).limit(5_000),
     ]);
 
     orders = (ordersRes.data ?? []) as Order[];

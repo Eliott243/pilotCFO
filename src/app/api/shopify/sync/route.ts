@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST() {
   const supabase = await createClient();
@@ -9,6 +10,14 @@ export async function POST() {
 
   if (!user) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+
+  const { allowed, retryAfterSec } = checkRateLimit(`shopify-sync:${user.id}`, 10, 60_000);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Trop de synchronisations. Réessayez plus tard." },
+      { status: 429, headers: { "Retry-After": String(retryAfterSec) } }
+    );
   }
 
   const {
@@ -27,7 +36,7 @@ export async function POST() {
 
   const { data: store } = await supabase
     .from("stores")
-    .select("id, shopify_domain")
+    .select("id")
     .eq("company_id", company.id)
     .single();
 
@@ -37,11 +46,11 @@ export async function POST() {
 
   const { data: connection } = await supabase
     .from("shopify_connections")
-    .select("access_token")
+    .select("id")
     .eq("store_id", store.id)
     .single();
 
-  if (!connection) {
+  if (!connection?.id) {
     return NextResponse.json({ error: "Connexion Shopify introuvable" }, { status: 404 });
   }
 
@@ -49,22 +58,10 @@ export async function POST() {
     return NextResponse.json({ error: "Session invalide" }, { status: 401 });
   }
 
-  // Mark syncing (best-effort)
   await supabase
     .from("shopify_connections")
     .update({ sync_status: "syncing", sync_error: null })
     .eq("store_id", store.id);
-
-  const serviceClient = await createServiceClient();
-  const { data: shopConn } = await serviceClient
-    .from("shopify_connections")
-    .select("id")
-    .eq("store_id", store.id)
-    .single();
-
-  if (!shopConn?.id) {
-    return NextResponse.json({ error: "shop_id introuvable" }, { status: 500 });
-  }
 
   const functionsUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/sync-shopify-data`;
   const res = await fetch(functionsUrl, {
@@ -73,15 +70,12 @@ export async function POST() {
       Authorization: `Bearer ${session.access_token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ shop_id: shopConn.id }),
+    body: JSON.stringify({ shop_id: connection.id }),
   });
 
   const result = await res.json().catch(() => ({}));
   if (!res.ok) {
-    return NextResponse.json(
-      { error: "Sync failed", detail: result?.detail ?? result?.error ?? "" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Échec de la synchronisation" }, { status: 500 });
   }
 
   await supabase.from("activity_logs").insert({

@@ -35,7 +35,7 @@ serve(async (req) => {
     .from("shopify_connections")
     .update({
       connected: false,
-      access_token: null,
+      access_token: "revoked",
       sync_status: "error",
       sync_error: "app/uninstalled",
     })

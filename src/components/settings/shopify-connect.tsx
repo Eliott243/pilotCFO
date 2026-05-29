@@ -52,11 +52,10 @@ export function ShopifyConnect({ store, connection, connected, error }: ShopifyC
       setWebhooksStatus("registering");
       try {
         const supabase = createClient();
-        const functionsUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1`;
         const { error: invokeError } = await supabase.functions.invoke(
           "register-shopify-webhooks",
           {
-            body: { shop_id: connection.id, supabase_functions_url: functionsUrl },
+            body: { shop_id: connection.id },
           }
         );
         if (invokeError) throw new Error(invokeError.message);

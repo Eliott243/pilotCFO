@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { ShopifyConnect } from "@/components/settings/shopify-connect";
 import { SubscriptionPanel } from "@/components/settings/subscription-panel";
@@ -18,15 +19,19 @@ export default async function SettingsPage({
     data: { user },
   } = await supabase.auth.getUser();
 
+  if (!user) {
+    redirect("/login");
+  }
+
   const [{ data: company }, { data: store }, { data: subscription }, { data: connection }] =
     await Promise.all([
-    supabase.from("companies").select("*").eq("user_id", user!.id).single(),
+    supabase.from("companies").select("*").eq("user_id", user.id).single(),
     supabase
       .from("stores")
       .select("id, shopify_domain, shop_name")
       .limit(1)
       .maybeSingle(),
-    supabase.from("subscriptions").select("*").eq("user_id", user!.id).single(),
+    supabase.from("subscriptions").select("*").eq("user_id", user.id).single(),
     supabase
       .from("shopify_connections")
       .select("id, last_synced_at, sync_status, sync_error, connected")
@@ -42,12 +47,26 @@ export default async function SettingsPage({
       />
 
       <div className="space-y-8 max-w-2xl">
+        {params.shopify === "connected" && (
+          <p className="text-sm text-success">Boutique Shopify connectée avec succès.</p>
+        )}
+        {params.error === "shop_taken" && (
+          <p className="text-sm text-danger">
+            Cette boutique est déjà connectée à un autre compte pilotCFO.
+          </p>
+        )}
+        {params.error && params.error !== "shop_taken" && (
+          <p className="text-sm text-danger">
+            Erreur de connexion Shopify. Réessayez.
+          </p>
+        )}
+
         <section>
           <h2 className="text-sm font-medium mb-4">{dict.settings.language}</h2>
           <LocaleSwitcher current={locale} />
         </section>
 
-        <section>
+        <section id="shopify">
           <h2 className="text-sm font-medium mb-4">{dict.settings.shopifyStore}</h2>
           <ShopifyConnect
             store={store}

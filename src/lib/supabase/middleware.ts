@@ -1,10 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { isDemoMode, isSupabaseConfigured } from "@/lib/supabase/config";
-import { ONBOARDING_DONE_COOKIE, QUESTIONNAIRE_DONE_COOKIE } from "@/lib/auth/flow-cookies";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 export async function updateSession(request: NextRequest) {
-  if (!isSupabaseConfigured() || isDemoMode()) {
+  if (!isSupabaseConfigured()) {
     return NextResponse.next({ request });
   }
 
@@ -55,41 +54,31 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && !isAuthRoute && !isPublicRoute) {
-    // Avoid DB roundtrip on every navigation: prefer cookies set by completion endpoints.
-    const onboardingCookie = request.cookies.get(ONBOARDING_DONE_COOKIE)?.value === "1";
-    const questionnaireCookie = request.cookies.get(QUESTIONNAIRE_DONE_COOKIE)?.value === "1";
-    const cfoCookie = request.cookies.get("pilotcfo_cfo_done")?.value === "1";
+    const { data: profile } = await supabase
+      .from("users")
+      .select("onboarding_completed, questionnaire_completed")
+      .eq("id", user.id)
+      .maybeSingle();
 
-    let onboardingDone = onboardingCookie;
-    let questionnaireDone = questionnaireCookie;
-    let cfoQuestionnaireDone = questionnaireCookie || cfoCookie;
-
-    // Only hit DB if we don't have enough info from cookies (first-time / new device).
-    if (!onboardingDone || !questionnaireDone) {
-      const { data: profile } = await supabase
-        .from("users")
-        .select("onboarding_completed, questionnaire_completed")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      onboardingDone = onboardingDone || profile?.onboarding_completed === true;
-      questionnaireDone = questionnaireDone || profile?.questionnaire_completed === true;
-      cfoQuestionnaireDone = questionnaireDone || cfoQuestionnaireDone;
-    }
+    const onboardingDone = profile?.onboarding_completed === true;
+    const questionnaireDone = profile?.questionnaire_completed === true;
 
     const onboardingExempt =
       pathname.startsWith("/onboarding") ||
       pathname.startsWith("/questionnaire") ||
-      (pathname.startsWith("/ai-cfo") && cfoQuestionnaireDone);
+      (pathname.startsWith("/ai-cfo") && questionnaireDone);
 
-    // Ne pas expulser du questionnaire ni renvoyer à l'onboarding après le CFO questionnaire
-    if (!onboardingDone && !cfoQuestionnaireDone && !onboardingExempt) {
+    if (!onboardingDone && !questionnaireDone && !onboardingExempt) {
       const url = request.nextUrl.clone();
       url.pathname = "/onboarding";
       return NextResponse.redirect(url);
     }
 
-    if (!cfoQuestionnaireDone && !pathname.startsWith("/questionnaire") && !pathname.startsWith("/onboarding")) {
+    if (
+      !questionnaireDone &&
+      !pathname.startsWith("/questionnaire") &&
+      !pathname.startsWith("/onboarding")
+    ) {
       const url = request.nextUrl.clone();
       url.pathname = "/questionnaire";
       return NextResponse.redirect(url);

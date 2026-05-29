@@ -5,7 +5,7 @@ import {
   verifyShopifyHmac,
 } from "@/lib/shopify/client";
 import { syncShopifyStore } from "@/lib/shopify/sync";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   const params = Object.fromEntries(request.nextUrl.searchParams);
@@ -20,10 +20,19 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const authSupabase = await createClient();
+  const {
+    data: { user: sessionUser },
+  } = await authSupabase.auth.getUser();
+
+  if (!sessionUser || sessionUser.id !== userId) {
+    return NextResponse.redirect(
+      new URL("/settings?error=oauth", process.env.NEXT_PUBLIC_APP_URL!)
+    );
+  }
+
   const queryForHmac = { ...params };
-  if (
-    !verifyShopifyHmac(queryForHmac, process.env.SHOPIFY_API_SECRET!)
-  ) {
+  if (!verifyShopifyHmac(queryForHmac, process.env.SHOPIFY_API_SECRET!)) {
     return NextResponse.redirect(
       new URL("/settings?error=hmac", process.env.NEXT_PUBLIC_APP_URL!)
     );
@@ -42,9 +51,6 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createServiceClient();
 
-    // Create or update the company from the connected store. The store is the
-    // authoritative source for currency (orders are in store currency), so we
-    // always sync it; name/country are only backfilled when not set by the user.
     const shopCurrency = shopInfo.currency ?? "USD";
     const shopCountry = shopInfo.country_name ?? shopInfo.country_code ?? null;
 
@@ -79,10 +85,49 @@ export async function GET(request: NextRequest) {
       await supabase.from("companies").update(companyUpdates).eq("id", existingCompany.id);
     }
 
-    const { data: store, error: storeError } = await supabase
+    const { data: existingStore } = await supabase
       .from("stores")
-      .upsert(
-        {
+      .select("id, company_id, companies!inner(user_id)")
+      .eq("shopify_domain", shopDomain)
+      .maybeSingle();
+
+    const existingOwnerId = existingStore
+      ? (
+          existingStore.companies as { user_id: string } | { user_id: string }[]
+        ) &&
+        (Array.isArray(existingStore.companies)
+          ? existingStore.companies[0]?.user_id
+          : (existingStore.companies as { user_id: string }).user_id)
+      : null;
+
+    if (existingOwnerId && existingOwnerId !== userId) {
+      return NextResponse.redirect(
+        new URL("/settings?error=shop_taken", process.env.NEXT_PUBLIC_APP_URL!)
+      );
+    }
+
+    let storeId: string;
+
+    if (existingStore) {
+      const { data: updatedStore, error: updateError } = await supabase
+        .from("stores")
+        .update({
+          shop_name: shopInfo.name,
+          shop_email: shopInfo.email,
+          currency: shopInfo.currency ?? "USD",
+          timezone: shopInfo.timezone,
+          is_active: true,
+        })
+        .eq("id", existingStore.id)
+        .select("id")
+        .single();
+
+      if (updateError || !updatedStore) throw updateError;
+      storeId = updatedStore.id;
+    } else {
+      const { data: newStore, error: insertError } = await supabase
+        .from("stores")
+        .insert({
           company_id: companyId,
           shopify_domain: shopDomain,
           shop_name: shopInfo.name,
@@ -90,17 +135,17 @@ export async function GET(request: NextRequest) {
           currency: shopInfo.currency ?? "USD",
           timezone: shopInfo.timezone,
           is_active: true,
-        },
-        { onConflict: "shopify_domain" }
-      )
-      .select("id")
-      .single();
+        })
+        .select("id")
+        .single();
 
-    if (storeError || !store) throw storeError;
+      if (insertError || !newStore) throw insertError;
+      storeId = newStore.id;
+    }
 
     await supabase.from("shopify_connections").upsert(
       {
-        store_id: store.id,
+        store_id: storeId,
         access_token,
         scope,
         connected: true,
@@ -110,14 +155,13 @@ export async function GET(request: NextRequest) {
       { onConflict: "store_id" }
     );
 
-    // Initial sync still runs in-app; the UI can trigger full paginated Edge sync.
-    await syncShopifyStore(supabase, store.id, shopDomain, access_token);
+    await syncShopifyStore(supabase, storeId, shopDomain, access_token);
 
     await supabase.from("activity_logs").insert({
       user_id: userId,
       action: "shopify_connected",
       resource_type: "store",
-      resource_id: store.id,
+      resource_id: storeId,
     });
 
     const response = NextResponse.redirect(

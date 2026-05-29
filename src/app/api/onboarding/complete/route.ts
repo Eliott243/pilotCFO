@@ -40,7 +40,8 @@ export async function POST() {
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
     sameSite: "lax",
-    httpOnly: false,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
   });
   return response;
 }
