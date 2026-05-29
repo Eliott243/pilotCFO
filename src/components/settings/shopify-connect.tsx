@@ -151,8 +151,8 @@ export function ShopifyConnect({ store, connection, connected, error }: ShopifyC
         <p className="text-sm text-danger mb-3">Erreur de connexion. Réessayez.</p>
       )}
       <Label htmlFor="shop">Nom de votre boutique Shopify</Label>
-      <form action="/api/shopify/auth" method="GET" className="mt-2 flex gap-2">
-        <div className="flex-1 flex items-center gap-0">
+      <form action="/api/shopify/auth" method="GET" className="mt-2 flex flex-col sm:flex-row gap-2">
+        <div className="flex-1 flex items-stretch min-w-0">
           <Input
             id="shop"
             name="shop"
@@ -160,13 +160,13 @@ export function ShopifyConnect({ store, connection, connected, error }: ShopifyC
             onChange={(e) => setShop(e.target.value)}
             placeholder="ma-boutique"
             required
-            className="rounded-r-none"
+            className="rounded-r-none min-w-0"
           />
-          <span className="px-3 py-2 text-sm bg-stone-50 border border-l-0 border-border rounded-r-lg text-muted">
+          <span className="px-2 sm:px-3 py-2 text-xs sm:text-sm bg-stone-50 border border-l-0 border-border rounded-r-lg text-muted whitespace-nowrap shrink-0 flex items-center">
             .myshopify.com
           </span>
         </div>
-        <Button type="submit" disabled={!shop.trim()}>
+        <Button type="submit" disabled={!shop.trim()} className="w-full sm:w-auto shrink-0">
           Connecter
         </Button>
       </form>

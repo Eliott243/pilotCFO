@@ -40,12 +40,12 @@ export default async function CashFlowPage() {
                 ? "Modéré"
                 : "Faible"}
             </p>
-            <p className="text-3xl font-semibold mt-2">
+            <p className="text-2xl sm:text-3xl font-semibold mt-2">
               {metrics.cashFlow.runwayMonths.toFixed(1)} mois de runway
             </p>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
               { label: "Cash disponible", value: formatCurrency(metrics.cashFlow.cashAvailable, currency) },
               { label: "Entrées mensuelles", value: formatCurrency(metrics.cashFlow.monthlyInflow, currency) },

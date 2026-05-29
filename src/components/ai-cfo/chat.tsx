@@ -77,8 +77,8 @@ export function AICFOChat() {
   }, [searchParams, sendMessage]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-220px)] rounded-xl border border-border bg-card overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+    <div className="flex flex-col min-h-[min(70dvh,calc(100dvh-11rem))] lg:min-h-[calc(100vh-220px)] rounded-xl border border-border bg-card overflow-hidden">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
         {messages.length === 0 && !loading && (
           <div className="text-center py-8">
             <p className="text-sm text-muted mb-6">
@@ -103,7 +103,7 @@ export function AICFOChat() {
           <div
             key={i}
             className={cn(
-              "max-w-[85%] text-sm leading-relaxed",
+              "max-w-[92%] sm:max-w-[85%] text-sm leading-relaxed",
               msg.role === "user"
                 ? "ml-auto bg-accent text-white px-4 py-3 rounded-2xl rounded-br-sm"
                 : "bg-stone-50 text-foreground px-4 py-3 rounded-2xl rounded-bl-sm border border-border"

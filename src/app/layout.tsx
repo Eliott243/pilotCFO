@@ -15,6 +15,12 @@ export const metadata: Metadata = {
     "Comprenez votre rentabilité, trésorerie, croissance et risques. Le CFO virtuel pour marchands Shopify.",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover" as const,
+};
+
 export default async function RootLayout({
   children,
 }: Readonly<{

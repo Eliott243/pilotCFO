@@ -24,7 +24,7 @@ export default async function ProfitabilityPage() {
         />
       ) : (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               { label: "Marge brute", value: formatPercent(metrics.profitability.grossMarginPct) },
               { label: "Marge nette", value: formatPercent(metrics.profitability.netMarginPct) },
@@ -44,10 +44,10 @@ export default async function ProfitabilityPage() {
               {metrics.profitability.topCostDrivers.map((driver) => (
                 <div
                   key={driver.label}
-                  className="flex items-center justify-between p-4 rounded-xl border border-border bg-card"
+                  className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between p-4 rounded-xl border border-border bg-card"
                 >
                   <span className="text-sm">{driver.label}</span>
-                  <div className="text-right">
+                  <div className="text-left sm:text-right shrink-0">
                     <span className="text-sm font-medium">
                       {formatCurrency(driver.amount, currency)}
                     </span>

@@ -28,9 +28,9 @@ export function SubscriptionPanel({ subscription }: SubscriptionPanelProps) {
   const plan = subscription?.plan ?? "trial";
 
   return (
-    <div className="p-5 rounded-xl border border-border bg-card">
-      <div className="flex items-center justify-between">
-        <div>
+    <div className="p-4 sm:p-5 rounded-xl border border-border bg-card">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <p className="font-medium text-sm capitalize">Plan {plan}</p>
           <p className="text-xs text-muted mt-0.5">
             {isTrialing && subscription?.trial_ends_at
@@ -38,13 +38,13 @@ export function SubscriptionPanel({ subscription }: SubscriptionPanelProps) {
               : `Statut · ${subscription?.status ?? "—"}`}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           {plan === "trial" || plan === "starter" ? (
-            <Button size="sm" onClick={startCheckout}>
+            <Button size="sm" onClick={startCheckout} className="w-full sm:w-auto">
               Passer à Growth
             </Button>
           ) : null}
-          <Button size="sm" variant="secondary" onClick={openPortal}>
+          <Button size="sm" variant="secondary" onClick={openPortal} className="w-full sm:w-auto">
             Portail client
           </Button>
         </div>

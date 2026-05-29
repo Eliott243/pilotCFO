@@ -43,7 +43,7 @@ export default async function OverviewPage() {
             </section>
           )}
 
-          <section className="grid grid-cols-2 gap-4">
+          <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="p-5 rounded-xl border border-border bg-card">
               <p className="text-sm text-muted">Commandes (30j)</p>
               <p className="text-xl font-semibold mt-1">

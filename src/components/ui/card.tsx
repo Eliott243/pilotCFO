@@ -9,7 +9,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "bg-card rounded-xl border border-border p-6 shadow-sm",
+        "bg-card rounded-xl border border-border p-4 sm:p-6 shadow-sm",
         className
       )}
       {...props}
@@ -55,7 +55,7 @@ export function CardValue({
   children: React.ReactNode;
 }) {
   return (
-    <p className={cn("text-2xl font-semibold tracking-tight text-foreground mt-1", className)}>
+    <p className={cn("text-xl sm:text-2xl font-semibold tracking-tight text-foreground mt-1 break-words", className)}>
       {children}
     </p>
   );

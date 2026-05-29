@@ -138,7 +138,7 @@ export function CfoQuestionnaire() {
   return (
     <div className="min-h-screen bg-white flex flex-col">
       {/* Progress dots */}
-      <div className="px-8 pt-8 pb-4 max-w-lg mx-auto w-full">
+      <div className="px-4 sm:px-8 pt-6 sm:pt-8 pb-4 max-w-lg mx-auto w-full">
         <div className="flex items-center justify-center gap-2">
           {CFO_QUESTIONS.map((_, i) => {
             const done =
@@ -158,7 +158,7 @@ export function CfoQuestionnaire() {
         </div>
       </div>
 
-      <div className="flex-1 max-w-lg mx-auto w-full px-8 pb-8 flex flex-col">
+      <div className="flex-1 max-w-lg mx-auto w-full px-4 sm:px-8 pb-8 flex flex-col">
         <AnimatePresence mode="wait" custom={direction}>
           {step === "questions" ? (
             <motion.div

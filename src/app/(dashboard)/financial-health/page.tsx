@@ -37,9 +37,9 @@ export default async function FinancialHealthPage() {
         />
       ) : (
         <div className="space-y-6">
-          <div className="p-8 rounded-2xl border border-border bg-card text-center">
+          <div className="p-6 sm:p-8 rounded-2xl border border-border bg-card text-center">
             <p className="text-sm text-muted mb-2">Score global</p>
-            <p className="text-6xl font-semibold tracking-tight text-accent">
+            <p className="text-4xl sm:text-6xl font-semibold tracking-tight text-accent">
               {metrics.health.overall}
             </p>
             <p className="text-sm text-muted mt-3 max-w-md mx-auto">

@@ -90,7 +90,7 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="px-8 py-6 flex items-center justify-between">
+      <header className="px-4 sm:px-8 py-4 sm:py-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Image
             src="/brand/logo.png"
@@ -111,7 +111,7 @@ export default function OnboardingPage() {
         </button>
       </header>
 
-      <div className="px-8 mb-4">
+      <div className="px-4 sm:px-8 mb-4">
         <div className="h-1 bg-stone-100 rounded-full overflow-hidden max-w-md">
           <motion.div
             className="h-full bg-accent rounded-full"
@@ -124,7 +124,7 @@ export default function OnboardingPage() {
         </p>
       </div>
 
-      <main className="flex-1 flex items-center justify-center px-8">
+      <main className="flex-1 flex items-center justify-center px-4 sm:px-8">
         <AnimatePresence mode="wait">
           <motion.div
             key={current.id}
@@ -137,14 +137,14 @@ export default function OnboardingPage() {
             <div className="w-16 h-16 rounded-2xl bg-accent-light flex items-center justify-center mx-auto mb-6">
               <Icon className="w-8 h-8 text-accent" />
             </div>
-            <h1 className="text-3xl font-semibold tracking-tight">{current.title}</h1>
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{current.title}</h1>
             <p className="text-muted mt-3 text-lg">{current.description}</p>
             <p className="text-sm text-muted mt-4 leading-relaxed">{current.detail}</p>
           </motion.div>
         </AnimatePresence>
       </main>
 
-      <footer className="px-8 py-8 flex justify-center gap-3">
+      <footer className="px-4 sm:px-8 py-6 sm:py-8 flex flex-col sm:flex-row justify-center gap-3">
         {step > 0 && (
           <Button variant="ghost" onClick={() => setStep(step - 1)} disabled={loading}>
             Retour

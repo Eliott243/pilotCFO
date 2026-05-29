@@ -111,7 +111,7 @@ export function CompanyForm({ company }: CompanyFormProps) {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <Label htmlFor="founded_year">Année de création</Label>
           <Input
@@ -137,7 +137,7 @@ export function CompanyForm({ company }: CompanyFormProps) {
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={saving || !name.trim()}>
           {saving ? "Enregistrement..." : "Enregistrer"}
         </Button>

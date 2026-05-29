@@ -20,7 +20,7 @@ export default async function ReportsPage() {
         subtitle="Rapports mensuels générés par le moteur CFO : Executive Summary, Revenue, Profitability, Cash Flow, Risks, Recommendations, Forecasts."
       >
         <form action="/api/reports/generate" method="POST">
-          <Button type="submit" variant="secondary" size="sm">
+          <Button type="submit" variant="secondary" size="sm" className="w-full sm:w-auto">
             Générer rapport mensuel
           </Button>
         </form>
@@ -39,8 +39,8 @@ export default async function ReportsPage() {
               key={report.id}
               className="p-5 rounded-xl border border-border bg-card hover:border-stone-300 transition-colors"
             >
-              <div className="flex items-start justify-between">
-                <div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
                   <h3 className="font-medium text-sm">{report.title}</h3>
                   <p className="text-xs text-muted mt-0.5">
                     {format(new Date(report.period_start), "d MMM yyyy", { locale: fr })}
@@ -48,7 +48,7 @@ export default async function ReportsPage() {
                     {format(new Date(report.period_end), "d MMM yyyy", { locale: fr })}
                   </p>
                 </div>
-                <span className="text-xs text-muted">
+                <span className="text-xs text-muted shrink-0">
                   {format(new Date(report.created_at), "d MMM yyyy", { locale: fr })}
                 </span>
               </div>
