@@ -3,8 +3,8 @@ import { ensureUserProfile } from "@/lib/supabase/ensure-profile";
 import { createClient } from "@/lib/supabase/server";
 import { QUESTIONNAIRE_DONE_COOKIE } from "@/lib/auth/flow-cookies";
 
-/** Marque le questionnaire CFO comme terminé — requiert un profil financier existant. */
-export async function POST() {
+/** Marque le questionnaire CFO comme terminé (MCQ 6 questions) */
+export async function POST(request: Request) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -19,27 +19,20 @@ export async function POST() {
     return NextResponse.json({ error: "Profil utilisateur introuvable" }, { status: 500 });
   }
 
-  const { data: company } = await supabase
-    .from("companies")
-    .select("id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (!company) {
-    return NextResponse.json({ error: "Questionnaire incomplet" }, { status: 400 });
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Corps de requête invalide" }, { status: 400 });
   }
 
-  const { data: financialProfile } = await supabase
-    .from("financial_profiles")
-    .select("id, annual_revenue")
-    .eq("company_id", company.id)
-    .maybeSingle();
-
-  if (!financialProfile?.annual_revenue) {
-    return NextResponse.json(
-      { error: "Complétez le questionnaire avant de continuer" },
-      { status: 400 }
-    );
+  const answers = (body as { answers?: unknown })?.answers;
+  if (
+    !Array.isArray(answers) ||
+    answers.length !== 6 ||
+    !answers.every((v) => Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 10)
+  ) {
+    return NextResponse.json({ error: "Réponses invalides" }, { status: 400 });
   }
 
   const { error } = await supabase
@@ -57,7 +50,7 @@ export async function POST() {
   await supabase.from("activity_logs").insert({
     user_id: user.id,
     action: "questionnaire_completed",
-    metadata: { type: "cfo_onboarding_v2" },
+    metadata: { type: "cfo_onboarding_v2", answers },
   });
 
   const response = NextResponse.json({ success: true });

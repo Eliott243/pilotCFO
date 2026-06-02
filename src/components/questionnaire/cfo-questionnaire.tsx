@@ -109,7 +109,9 @@ export function CfoQuestionnaire() {
     try {
       const res = await fetch("/api/questionnaire/complete", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
+        body: JSON.stringify({ answers }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -118,7 +120,6 @@ export function CfoQuestionnaire() {
         return;
       }
 
-      document.cookie = `${CFO_DONE_COOKIE}=1; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`;
       sessionStorage.removeItem(CFO_DRAFT_STORAGE_KEY);
       router.push("/ai-cfo?autostart=1");
     } catch {
