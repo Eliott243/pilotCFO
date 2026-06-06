@@ -58,11 +58,27 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && !isAuthRoute && !isPublicRoute) {
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from("users")
       .select("onboarding_completed, questionnaire_completed")
       .eq("id", user.id)
       .maybeSingle();
+
+    if (
+      pathname.startsWith("/ai-cfo") ||
+      pathname.startsWith("/questionnaire")
+    ) {
+      console.log("[DIAG mw]", {
+        pathname,
+        userId: user.id,
+        profileError: profileError?.message ?? null,
+        profileOnb: profile?.onboarding_completed ?? "MISSING",
+        profileQuest: profile?.questionnaire_completed ?? "MISSING",
+        cookieQuest: request.cookies.get(QUESTIONNAIRE_DONE_COOKIE)?.value ?? "NONE",
+        cookieOnb: request.cookies.get(ONBOARDING_DONE_COOKIE)?.value ?? "NONE",
+        allCookieNames: request.cookies.getAll().map((c) => c.name),
+      });
+    }
 
     // Fallback sur les cookies posés par les routes de complétion : juste après
     // l'écriture en base, une lecture peut encore renvoyer l'ancienne valeur

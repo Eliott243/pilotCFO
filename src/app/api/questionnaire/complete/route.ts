@@ -35,13 +35,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Réponses invalides" }, { status: 400 });
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("users")
     .update({
       questionnaire_completed: true,
       onboarding_completed: true,
     })
-    .eq("id", user.id);
+    .eq("id", user.id)
+    .select("id, questionnaire_completed, onboarding_completed");
+
+  console.log("[DIAG complete]", {
+    userId: user.id,
+    updateError: error?.message ?? null,
+    rowsUpdated: updated?.length ?? 0,
+    updatedRow: updated?.[0] ?? null,
+  });
 
   if (error) {
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
