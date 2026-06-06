@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
   AI_PREFILL_STORAGE_KEY,
-  CFO_DONE_COOKIE,
   CFO_DRAFT_STORAGE_KEY,
   CFO_QUESTIONS,
 } from "@/lib/questionnaire/cfo-questions";
@@ -22,7 +20,6 @@ const PURPLE_LIGHT = "#EEF2FF";
 type Step = "questions" | "result";
 
 export function CfoQuestionnaire() {
-  const router = useRouter();
   const [step, setStep] = useState<Step>("questions");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<QuestionnaireAnswers>(
@@ -121,7 +118,11 @@ export function CfoQuestionnaire() {
       }
 
       sessionStorage.removeItem(CFO_DRAFT_STORAGE_KEY);
-      router.push("/ai-cfo?autostart=1");
+      // Navigation "dure" : garantit qu'on quitte la page questionnaire et que
+      // le middleware réévalue l'accès sur une requête complète (avec le cookie
+      // de complétion). Évite le bouton figé sur "Lancement..." si une
+      // navigation douce était redirigée vers la même route.
+      window.location.assign("/ai-cfo?autostart=1");
     } catch {
       setError("Erreur réseau. Vérifiez votre connexion et réessayez.");
       setSubmitting(false);

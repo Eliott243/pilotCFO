@@ -1,6 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import {
+  ONBOARDING_DONE_COOKIE,
+  QUESTIONNAIRE_DONE_COOKIE,
+} from "@/lib/auth/flow-cookies";
 
 export async function updateSession(request: NextRequest) {
   if (!isSupabaseConfigured()) {
@@ -60,8 +64,18 @@ export async function updateSession(request: NextRequest) {
       .eq("id", user.id)
       .maybeSingle();
 
-    const onboardingDone = profile?.onboarding_completed === true;
-    const questionnaireDone = profile?.questionnaire_completed === true;
+    // Fallback sur les cookies posés par les routes de complétion : juste après
+    // l'écriture en base, une lecture peut encore renvoyer l'ancienne valeur
+    // (latence / réplica). Le cookie évite alors une redirection en boucle.
+    const onboardingCookie =
+      request.cookies.get(ONBOARDING_DONE_COOKIE)?.value === "1";
+    const questionnaireCookie =
+      request.cookies.get(QUESTIONNAIRE_DONE_COOKIE)?.value === "1";
+
+    const onboardingDone =
+      profile?.onboarding_completed === true || onboardingCookie;
+    const questionnaireDone =
+      profile?.questionnaire_completed === true || questionnaireCookie;
 
     const onboardingExempt =
       pathname.startsWith("/onboarding") ||
