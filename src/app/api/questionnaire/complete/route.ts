@@ -3,14 +3,18 @@ import { ensureUserProfile } from "@/lib/supabase/ensure-profile";
 import { createClient } from "@/lib/supabase/server";
 import { QUESTIONNAIRE_DONE_COOKIE } from "@/lib/auth/flow-cookies";
 
+const DEBUG = process.env.AUTH_FLOW_DEBUG === "1";
+
 /** Marque le questionnaire CFO comme terminé (MCQ 6 questions) */
 export async function POST(request: Request) {
+  if (DEBUG) console.log("[auth-flow] handler:/api/questionnaire/complete reached");
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
+    if (DEBUG) console.log("[auth-flow] /api/questionnaire/complete -> 401 (no user)");
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -44,15 +48,21 @@ export async function POST(request: Request) {
     .eq("id", user.id)
     .select("id, questionnaire_completed, onboarding_completed");
 
-  console.log("[DIAG complete]", {
-    userId: user.id,
-    updateError: error?.message ?? null,
-    rowsUpdated: updated?.length ?? 0,
-    updatedRow: updated?.[0] ?? null,
-  });
+  if (DEBUG)
+    console.log("[auth-flow] /api/questionnaire/complete update", {
+      userId: user.id,
+      updateError: error?.message ?? null,
+      rowsUpdated: updated?.length ?? 0,
+      updatedRow: updated?.[0] ?? null,
+    });
 
-  if (error) {
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  // Guard: a silent zero-row update (e.g. RLS) must NOT report success, otherwise
+  // the middleware gate keeps redirecting the user in a loop.
+  if (error || !updated || updated.length === 0) {
+    return NextResponse.json(
+      { error: "Impossible d'enregistrer la complétion du questionnaire." },
+      { status: 500 }
+    );
   }
 
   await supabase.from("activity_logs").insert({

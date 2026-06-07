@@ -3,13 +3,17 @@ import { ensureUserProfile } from "@/lib/supabase/ensure-profile";
 import { createClient } from "@/lib/supabase/server";
 import { ONBOARDING_DONE_COOKIE } from "@/lib/auth/flow-cookies";
 
+const DEBUG = process.env.AUTH_FLOW_DEBUG === "1";
+
 export async function POST() {
+  if (DEBUG) console.log("[auth-flow] handler:/api/onboarding/complete reached");
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
+    if (DEBUG) console.log("[auth-flow] /api/onboarding/complete -> 401 (no user)");
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -21,13 +25,24 @@ export async function POST() {
     );
   }
 
-  const { error: updateError } = await supabase
+  const { data: updated, error: updateError } = await supabase
     .from("users")
     .update({ onboarding_completed: true })
-    .eq("id", user.id);
+    .eq("id", user.id)
+    .select("id, onboarding_completed");
 
-  if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
+  if (DEBUG)
+    console.log("[auth-flow] /api/onboarding/complete update", {
+      userId: user.id,
+      updateError: updateError?.message ?? null,
+      rowsUpdated: updated?.length ?? 0,
+    });
+
+  if (updateError || !updated || updated.length === 0) {
+    return NextResponse.json(
+      { error: "Impossible d'enregistrer l'onboarding." },
+      { status: 500 }
+    );
   }
 
   await supabase.from("activity_logs").insert({
