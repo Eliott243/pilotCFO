@@ -1,6 +1,9 @@
 import { PageHeader } from "@/components/dashboard/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
+import { UpgradePrompt } from "@/components/billing/upgrade-prompt";
 import { getStoreMetrics } from "@/lib/data/metrics";
+import { createClient } from "@/lib/supabase/server";
+import { getEntitlements } from "@/lib/billing/entitlements";
 import { formatCurrency } from "@/lib/utils";
 
 const PERIODS = [
@@ -11,6 +14,29 @@ const PERIODS = [
 ];
 
 export default async function ForecastsPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const entitlements = user
+    ? await getEntitlements(supabase, user.id)
+    : { premium: false };
+
+  if (!entitlements.premium) {
+    return (
+      <>
+        <PageHeader
+          title="Forecasts"
+          subtitle="Quelle croissance puis-je supporter ? Projections basées sur vos données réelles Shopify."
+        />
+        <UpgradePrompt
+          feature="Forecasts"
+          description="Projetez votre croissance, votre profit et votre trésorerie. Disponible avec le plan Growth — votre essai inclut 14 jours d'accès complet."
+        />
+      </>
+    );
+  }
+
   const { metrics, hasStore, currency } = await getStoreMetrics();
 
   return (

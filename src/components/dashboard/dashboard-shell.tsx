@@ -16,9 +16,13 @@ export function DashboardShell({ children, showDemoBanner }: DashboardShellProps
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
 
-  useEffect(() => {
+  // Close the mobile menu on navigation (React's "adjust state during render"
+  // pattern, instead of a setState-in-effect).
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
     setMenuOpen(false);
-  }, [pathname]);
+  }
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";

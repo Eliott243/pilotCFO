@@ -1,7 +1,9 @@
 import { PageHeader } from "@/components/dashboard/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { GenerateReportButton } from "@/components/reports/generate-report-button";
+import { UpgradePrompt } from "@/components/billing/upgrade-prompt";
 import { createClient } from "@/lib/supabase/server";
+import { getEntitlements } from "@/lib/billing/entitlements";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -12,6 +14,28 @@ export default async function ReportsPage({
 }) {
   const params = await searchParams;
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const entitlements = user
+    ? await getEntitlements(supabase, user.id)
+    : { premium: false };
+
+  if (!entitlements.premium) {
+    return (
+      <>
+        <PageHeader
+          title="Reports"
+          subtitle="Rapports mensuels générés par le moteur CFO : Executive Summary, Revenue, Profitability, Cash Flow, Risks, Recommendations, Forecasts."
+        />
+        <UpgradePrompt
+          feature="Reports"
+          description="Générez des rapports financiers mensuels complets. Disponible avec le plan Growth — votre essai inclut 14 jours d'accès complet."
+        />
+      </>
+    );
+  }
+
   const { data: reports } = await supabase
     .from("reports")
     .select("id, title, period_start, period_end, executive_summary, created_at")
@@ -31,7 +55,9 @@ export default async function ReportsPage({
         <p className="text-sm text-danger mb-4">
           {params.error === "rate"
             ? "Trop de rapports générés. Réessayez dans une minute."
-            : "Impossible de générer le rapport. Vérifiez votre connexion Shopify."}
+            : params.error === "plan"
+              ? "Les rapports nécessitent le plan Growth."
+              : "Impossible de générer le rapport. Vérifiez votre connexion Shopify."}
         </p>
       )}
 

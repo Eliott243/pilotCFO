@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { ensureUserProfile } from "@/lib/supabase/ensure-profile";
 import { createClient } from "@/lib/supabase/server";
 import { QUESTIONNAIRE_DONE_COOKIE } from "@/lib/auth/flow-cookies";
+import { markUserFlags } from "@/lib/auth/profile-flags";
 
 const DEBUG = process.env.AUTH_FLOW_DEBUG === "1";
 
@@ -39,26 +40,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Réponses invalides" }, { status: 400 });
   }
 
-  const { data: updated, error } = await supabase
-    .from("users")
-    .update({
-      questionnaire_completed: true,
-      onboarding_completed: true,
-    })
-    .eq("id", user.id)
-    .select("id, questionnaire_completed, onboarding_completed");
+  // Sensitive flags: written via service role (authenticated clients cannot
+  // update questionnaire_completed / onboarding_completed after migration 005).
+  const ok = await markUserFlags(user.id, {
+    questionnaire_completed: true,
+    onboarding_completed: true,
+  });
 
   if (DEBUG)
     console.log("[auth-flow] /api/questionnaire/complete update", {
       userId: user.id,
-      updateError: error?.message ?? null,
-      rowsUpdated: updated?.length ?? 0,
-      updatedRow: updated?.[0] ?? null,
+      ok,
     });
 
-  // Guard: a silent zero-row update (e.g. RLS) must NOT report success, otherwise
-  // the middleware gate keeps redirecting the user in a loop.
-  if (error || !updated || updated.length === 0) {
+  // Guard: a silent failure must NOT report success, otherwise the middleware
+  // gate keeps redirecting the user in a loop.
+  if (!ok) {
     return NextResponse.json(
       { error: "Impossible d'enregistrer la complétion du questionnaire." },
       { status: 500 }

@@ -20,6 +20,12 @@ export default async function CashFlowPage() {
           description="Complétez la section trésorerie du questionnaire CFO et connectez Shopify."
           action={{ label: "Questionnaire", href: "/questionnaire" }}
         />
+      ) : !metrics.dataQuality.hasCashData ? (
+        <EmptyState
+          title="Données de trésorerie manquantes"
+          description="Votre runway ne peut pas être calculé sans vos données réelles (cash disponible, dette, ligne de crédit). Complétez la section trésorerie du questionnaire."
+          action={{ label: "Compléter le questionnaire", href: "/questionnaire" }}
+        />
       ) : (
         <div className="space-y-6">
           <div

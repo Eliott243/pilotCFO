@@ -96,5 +96,14 @@ export function getDemoMetrics(): CFOMetrics {
         action: "Tester de nouvelles audiences ou créatives",
       },
     ],
+    dataQuality: {
+      ordersCount: 1247,
+      cogsSource: "shopify",
+      cogsCoveragePct: 100,
+      logisticsSource: "profile",
+      hasMarketingSpend: true,
+      hasCashData: true,
+      hasProfile: true,
+    },
   };
 }

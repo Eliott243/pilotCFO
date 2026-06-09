@@ -6,6 +6,8 @@ import {
 } from "@/lib/shopify/client";
 import { syncShopifyStore } from "@/lib/shopify/sync";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { encryptToken } from "@/lib/crypto/token";
+import { logSecurity } from "@/lib/logging";
 
 export async function GET(request: NextRequest) {
   const params = Object.fromEntries(request.nextUrl.searchParams);
@@ -143,10 +145,12 @@ export async function GET(request: NextRequest) {
       storeId = newStore.id;
     }
 
+    // Encrypt the access token at rest (AES-256-GCM). Decryption happens only
+    // server-side (Edge Functions) — the token is never exposed to the client.
     await supabase.from("shopify_connections").upsert(
       {
         store_id: storeId,
-        access_token,
+        access_token: encryptToken(access_token),
         scope,
         connected: true,
         sync_status: "never",
@@ -155,7 +159,10 @@ export async function GET(request: NextRequest) {
       { onConflict: "store_id" }
     );
 
+    // Use the in-memory plaintext token for the immediate first sync.
     await syncShopifyStore(supabase, storeId, shopDomain, access_token);
+
+    logSecurity("shopify_connected", { userId, storeId }, "info");
 
     await supabase.from("activity_logs").insert({
       user_id: userId,

@@ -5,9 +5,27 @@ import {
   ONBOARDING_DONE_COOKIE,
   QUESTIONNAIRE_DONE_COOKIE,
 } from "@/lib/auth/flow-cookies";
+import { logSecurity } from "@/lib/logging";
 
 export async function updateSession(request: NextRequest) {
+  // Auth must NEVER fail open. If Supabase is not configured we cannot
+  // authenticate anyone — in production we deny all access rather than serving
+  // protected content unauthenticated. In development we allow it (with an
+  // explicit error log) so the app is still runnable without secrets locally.
   if (!isSupabaseConfigured()) {
+    logSecurity(
+      "supabase_not_configured",
+      { pathname: request.nextUrl.pathname, env: process.env.NODE_ENV },
+      "error"
+    );
+    if (process.env.NODE_ENV === "production") {
+      return new NextResponse(
+        JSON.stringify({
+          error: "Service indisponible : authentification non configurée.",
+        }),
+        { status: 503, headers: { "content-type": "application/json" } }
+      );
+    }
     return NextResponse.next({ request });
   }
 
@@ -48,7 +66,12 @@ export async function updateSession(request: NextRequest) {
   // they could write onboarding_completed / questionnaire_completed, causing an
   // infinite redirect loop.
   const isApiRoute = pathname.startsWith("/api");
-  const isPublicRoute = pathname === "/" || isApiRoute;
+  // /auth/* (magic link / OAuth callback) MUST stay reachable while the user is
+  // still unauthenticated — the session is only established once
+  // exchangeCodeForSession runs inside /auth/callback. Redirecting it to /login
+  // would break magic-link and OAuth sign-in entirely.
+  const isAuthCallback = pathname.startsWith("/auth");
+  const isPublicRoute = pathname === "/" || isApiRoute || isAuthCallback;
 
   const DEBUG = process.env.AUTH_FLOW_DEBUG === "1";
   const log = (decision: string, extra: Record<string, unknown> = {}) => {

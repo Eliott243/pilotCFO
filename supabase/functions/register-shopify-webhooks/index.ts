@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { getServiceSupabase } from "../_shared/supabase.ts";
+import { decryptToken } from "../_shared/crypto.ts";
 
 const WEBHOOKS = [
   { topic: "orders/create", path: "/webhooks-orders-create" },
@@ -67,7 +68,13 @@ serve(async (req) => {
   }
 
   const shop = storeRow.shopify_domain;
-  const accessToken = connection.access_token as string;
+  let accessToken: string;
+  try {
+    accessToken = await decryptToken(connection.access_token as string);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return json(500, { error: "Token decryption failed", detail: message });
+  }
 
   const results: { topic: string; ok: boolean; status?: number; error?: string }[] = [];
 

@@ -20,9 +20,12 @@ interface Message {
   content: string;
 }
 
+const HISTORY_TURNS_SENT = 8;
+
 export function AICFOChat() {
   const searchParams = useSearchParams();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -31,8 +34,10 @@ export function AICFOChat() {
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || loading) return;
 
+    const history = messages.slice(-HISTORY_TURNS_SENT);
     const userMessage: Message = { role: "user", content: text };
     setMessages((prev) => [...prev, userMessage]);
+    setSuggestions([]);
     setInput("");
     setLoading(true);
 
@@ -40,7 +45,7 @@ export function AICFOChat() {
       const res = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: text, history }),
       });
 
       if (!res.ok) {
@@ -53,6 +58,7 @@ export function AICFOChat() {
         ...prev,
         { role: "assistant", content: data.reply ?? data.error ?? "Erreur de réponse." },
       ]);
+      setSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -61,7 +67,7 @@ export function AICFOChat() {
     } finally {
       setLoading(false);
     }
-  }, [loading]);
+  }, [loading, messages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -120,6 +126,20 @@ export function AICFOChat() {
 
         {loading && (
           <div className="text-sm text-muted animate-pulse">Analyse en cours...</div>
+        )}
+
+        {!loading && suggestions.length > 0 && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {suggestions.map((q) => (
+              <button
+                key={q}
+                onClick={() => sendMessage(q)}
+                className="text-xs px-3 py-1.5 rounded-full border border-border hover:bg-stone-50 transition-colors text-muted hover:text-foreground"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
         )}
         <div ref={bottomRef} />
       </div>

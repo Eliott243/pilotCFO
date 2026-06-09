@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { sub } from "https://deno.land/std@0.224.0/datetime/mod.ts";
 import { fetchAllPages } from "../_shared/shopify.ts";
 import { getServiceSupabase } from "../_shared/supabase.ts";
+import { decryptToken } from "../_shared/crypto.ts";
 
 type SyncStatus = "never" | "syncing" | "success" | "error";
 
@@ -67,7 +68,17 @@ serve(async (req) => {
     .eq("id", shop_id);
 
   const shop = storeRow.shopify_domain;
-  const accessToken = connection.access_token as string;
+  let accessToken: string;
+  try {
+    accessToken = await decryptToken(connection.access_token as string);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    await supabase
+      .from("shopify_connections")
+      .update({ sync_status: "error" satisfies SyncStatus, sync_error: "token_decrypt_failed" })
+      .eq("id", shop_id);
+    return json(500, { error: "Token decryption failed", detail: message });
+  }
 
   try {
     const oneYearAgo = sub(new Date(), { years: 1 });

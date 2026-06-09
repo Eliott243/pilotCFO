@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getStoreMetrics } from "@/lib/data/metrics";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getEntitlements } from "@/lib/billing/entitlements";
+import { logPaywall } from "@/lib/logging";
 import { subDays, format } from "date-fns";
 
 export async function POST() {
@@ -12,6 +14,15 @@ export async function POST() {
 
   if (!user) {
     return NextResponse.redirect(new URL("/login", process.env.NEXT_PUBLIC_APP_URL));
+  }
+
+  // Server-side paywall — Reports is a Growth feature.
+  const entitlements = await getEntitlements(supabase, user.id);
+  if (!entitlements.premium) {
+    logPaywall("blocked", { userId: user.id, feature: "reports", plan: entitlements.plan, status: entitlements.status });
+    return NextResponse.redirect(
+      new URL("/reports?error=plan", process.env.NEXT_PUBLIC_APP_URL)
+    );
   }
 
   const { allowed } = checkRateLimit(`reports:${user.id}`, 5, 60_000);
@@ -51,11 +62,17 @@ export async function POST() {
       profitPerOrder: metrics.profitability.profitPerOrder,
       costDrivers: metrics.profitability.topCostDrivers,
     },
-    cash_flow_section: {
-      cashAvailable: metrics.cashFlow.cashAvailable,
-      runwayMonths: metrics.cashFlow.runwayMonths,
-      riskLevel: metrics.cashFlow.riskLevel,
-    },
+    cash_flow_section: metrics.dataQuality.hasCashData
+      ? {
+          dataAvailable: true,
+          cashAvailable: metrics.cashFlow.cashAvailable,
+          runwayMonths: metrics.cashFlow.runwayMonths,
+          riskLevel: metrics.cashFlow.riskLevel,
+        }
+      : {
+          dataAvailable: false,
+          note: "Données de trésorerie non renseignées dans le questionnaire — runway non calculable.",
+        },
     risks_section: metrics.alerts,
     recommendations: metrics.alerts.filter((a) => a.action).map((a) => a.action!),
     forecasts_section: metrics.forecasts,

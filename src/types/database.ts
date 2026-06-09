@@ -196,6 +196,23 @@ export interface CFOMetrics {
     months12: ForecastPeriod;
   };
   alerts: Alert[];
+  /** Provenance of the inputs — lets consumers distinguish real store data
+   *  from questionnaire estimates and missing data. */
+  dataQuality: DataQuality;
+}
+
+export interface DataQuality {
+  ordersCount: number;
+  /** "shopify": real per-variant costs · "profile": questionnaire % · "default": fallback %. */
+  cogsSource: "shopify" | "profile" | "default";
+  /** Share (0-100) of line-item value covered by a real Shopify cost. */
+  cogsCoveragePct: number;
+  logisticsSource: "profile" | "default";
+  /** True when the questionnaire declares any ad spend. */
+  hasMarketingSpend: boolean;
+  /** True when the questionnaire provides cash/debt/credit information. */
+  hasCashData: boolean;
+  hasProfile: boolean;
 }
 
 export interface ForecastPeriod {

@@ -88,6 +88,7 @@ export async function getStoreMetrics(storeId?: string): Promise<{
   let orders: Order[] = [];
   let previousPeriodOrders: Order[] = [];
   let products: Product[] = [];
+  let cogsCoveragePct: number | null = null;
 
   if (connection?.id) {
     const [v2Orders, v2PrevOrders, v2Products] = await Promise.all([
@@ -109,11 +110,18 @@ export async function getStoreMetrics(storeId?: string): Promise<{
     ]);
 
     if ((v2Orders.data?.length ?? 0) > 0) {
-      orders = (v2Orders.data ?? []).map((o) => mapV2Order(o, store.id, currency));
-      previousPeriodOrders = (v2PrevOrders.data ?? []).map((o) =>
-        mapV2Order(o, store.id, currency)
+      const costByVariant = buildVariantCostMap(v2Products.data ?? []);
+      const current = mapV2OrdersWithCogs(v2Orders.data ?? [], store.id, currency, costByVariant);
+      const previous = mapV2OrdersWithCogs(
+        v2PrevOrders.data ?? [],
+        store.id,
+        currency,
+        costByVariant
       );
+      orders = current.orders;
+      previousPeriodOrders = previous.orders;
       products = (v2Products.data ?? []).map((p) => mapV2Product(p, store.id));
+      cogsCoveragePct = current.coveragePct;
     }
   }
 
@@ -159,6 +167,7 @@ export async function getStoreMetrics(storeId?: string): Promise<{
     products,
     profile,
     previousPeriodOrders,
+    cogsCoveragePct,
   });
 
   return {
@@ -223,7 +232,69 @@ function sumShipping(shippingLines: unknown): number {
   );
 }
 
-function mapV2Order(raw: V2Order, storeId: string, currency: string): Order {
+interface V2LineItem {
+  variant_id?: number | null;
+  quantity?: number | null;
+  price?: string | number | null;
+}
+
+/** variant_id → real unit cost, from Shopify product variants (cost_source: "shopify"). */
+function buildVariantCostMap(rawProducts: V2Product[]): Map<number, number> {
+  const map = new Map<number, number>();
+  for (const product of rawProducts) {
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+    for (const variant of variants) {
+      const v = variant as { id?: number; cost?: number | null };
+      const cost = toNumber(v.cost);
+      if (v.id != null && cost > 0) map.set(v.id, cost);
+    }
+  }
+  return map;
+}
+
+/**
+ * Maps v2 orders, computing each order's real COGS from line items × variant
+ * costs. Coverage = value-weighted share of line items with a known real cost,
+ * so the engine can decide whether the real COGS are trustworthy.
+ */
+function mapV2OrdersWithCogs(
+  rawOrders: V2Order[],
+  storeId: string,
+  currency: string,
+  costByVariant: Map<number, number>
+): { orders: Order[]; coveragePct: number } {
+  let coveredValue = 0;
+  let totalValue = 0;
+
+  const orders = rawOrders.map((raw) => {
+    const lineItems = (Array.isArray(raw.line_items) ? raw.line_items : []) as V2LineItem[];
+    let cogs = 0;
+
+    for (const item of lineItems) {
+      const qty = toNumber(item.quantity) || 1;
+      const lineValue = toNumber(item.price) * qty;
+      totalValue += lineValue;
+
+      const cost = item.variant_id != null ? costByVariant.get(item.variant_id) : undefined;
+      if (cost !== undefined) {
+        cogs += cost * qty;
+        coveredValue += lineValue;
+      }
+    }
+
+    return mapV2Order(raw, storeId, currency, cogs);
+  });
+
+  const coveragePct = totalValue > 0 ? (coveredValue / totalValue) * 100 : 0;
+  return { orders, coveragePct };
+}
+
+function mapV2Order(
+  raw: V2Order,
+  storeId: string,
+  currency: string,
+  costOfGoods: number
+): Order {
   const lineItems = Array.isArray(raw.line_items) ? raw.line_items : [];
   return {
     id: String(raw.id),
@@ -241,7 +312,7 @@ function mapV2Order(raw: V2Order, storeId: string, currency: string): Order {
     customer_id: raw.customer_id,
     line_items_count: lineItems.length,
     refunded_amount: sumRefunds(raw.refunds),
-    cost_of_goods: 0,
+    cost_of_goods: costOfGoods,
     ordered_at: raw.created_at ?? raw.processed_at ?? new Date().toISOString(),
   };
 }

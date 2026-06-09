@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ensureUserProfile } from "@/lib/supabase/ensure-profile";
 import { createClient } from "@/lib/supabase/server";
 import { QUESTIONNAIRE_DONE_COOKIE } from "@/lib/auth/flow-cookies";
+import { markUserFlags } from "@/lib/auth/profile-flags";
 
 export async function GET() {
   const supabase = await createClient();
@@ -135,16 +136,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Erreur profil financier" }, { status: 500 });
   }
 
-  const { error: userUpdateError } = await supabase
-    .from("users")
-    .update({
-      questionnaire_completed: true,
-      onboarding_completed: true,
-    })
-    .eq("id", user.id);
+  // Sensitive flags written via service role (see migration 005).
+  const flagsOk = await markUserFlags(user.id, {
+    questionnaire_completed: true,
+    onboarding_completed: true,
+  });
 
-  if (userUpdateError) {
-    return NextResponse.json({ error: userUpdateError.message }, { status: 500 });
+  if (!flagsOk) {
+    return NextResponse.json(
+      { error: "Impossible d'enregistrer la complétion du questionnaire." },
+      { status: 500 }
+    );
   }
 
   await supabase.from("activity_logs").insert({
